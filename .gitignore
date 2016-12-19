@@ -1,2 +1,4 @@
 .*
-
+build/
+dist/
+op_service.egg-info/
