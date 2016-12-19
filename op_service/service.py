@@ -87,25 +87,23 @@ class OPService(object):
         })
       return self._make_json_response(output)
 
-    @self.flask_app.errorhandler(BadRequest)
-    def handle_bad_request(error):
-      return self._prepare_error_response(error, 400)
+    # Anything declared in this map (of error_type -> error_code) will get converted to a neatly formatted JSON
+    #   exception
+    ERROR_HANDLERS = {
+      BadRequest: 400,
+      AuthorizationException: 401,
+      NotFound: 404,
+      ConflictException: 409,
 
-    @self.flask_app.errorhandler(AuthorizationException)
-    def handle_authorization_exception(error):
-      return self._prepare_error_response(error, 401)
+      # Override the default error pages when Flask generates these error codes
+      404: 404,
+      500: 500
+    }
 
-    @self.flask_app.errorhandler(NotFound)
-    def handle_not_found(error):
-      return self._prepare_error_response(error, 404)
-
-    @self.flask_app.errorhandler(ConflictException)
-    def handle_conflict(error):
-      return self._prepare_error_response(error, 409)
-
-    @self.flask_app.errorhandler(500)
-    def handle_exception(error):
-      return self._prepare_error_response(error, 500)
+    for key, value in ERROR_HANDLERS.iteritems():
+      @self.flask_app.errorhandler(key)
+      def handle_bad_request(error):
+        return self._prepare_error_response(error, value)
 
   def _make_json_response(self, output):
     serialized_output = json.dumps(output)
