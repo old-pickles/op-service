@@ -7,10 +7,7 @@ from collections import defaultdict
 from flask_cors import CORS
 from functools import wraps
 
-
-# TODO: consider moving this inside the OPService.start function
-log = logging.getLogger('werkzeug')
-#log.setLevel(logging.ERROR)
+from op_service import logging_config
 
 
 class NotFound(Exception):

@@ -1,3 +1,3 @@
 ```
-python setup.py clean && python setup.py build && python setup.py install --user
+python setup.py clean --all && python setup.py build && python setup.py install --user
 ```
