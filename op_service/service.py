@@ -97,7 +97,7 @@ class OPService(object):
       500: 500
     }
 
-    for key, value in ERROR_HANDLERS.iteritems():
+    for key, value in ERROR_HANDLERS.items():
       @self.flask_app.errorhandler(key)
       def handle_bad_request(error):
         return self._prepare_error_response(error, value)
@@ -118,7 +118,7 @@ class OPService(object):
     return response
 
   def start(self, host='0.0.0.0', port=5000):
-    self.flask_app.run(host=host, port=port)
+    self.flask_app.run(host=host, port=port, threaded=True)
 
   def api(self, endpoint, input_format=None, requires_auth=None):
     def decorator(f):
