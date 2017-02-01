@@ -111,7 +111,7 @@ class OPService(object):
   def _prepare_error_response(self, error, status_code):
     output = {
       'error_code': error.__class__.__name__,
-      'error_message': error.message
+      'error_message': str(error)
     }
     response = self._make_json_response(output)
     response.status_code = status_code
@@ -202,9 +202,7 @@ def validate(input_data, input_format, key=None):
     else:
       input_format(input_data)
   except Exception as e:
-    msg = e.__class__.__name__
-    if e.message:
-      msg += ': ' + e.message
+    msg = e.__class__.__name__ + " " + str(e)
     if (key):
       msg = "Validation error on key '" + key + "': " + msg
     raise BadRequest(msg)
