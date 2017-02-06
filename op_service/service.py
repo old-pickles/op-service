@@ -4,6 +4,7 @@ import json
 import logging
 
 from collections import defaultdict
+from datetime import datetime
 from flask_cors import CORS
 from functools import wraps
 
@@ -50,6 +51,14 @@ class InvalidSubject(AuthorizationException):
   pass
 
 
+class _DateTimeEncoder(json.JSONEncoder):
+
+  def default(self, obj):
+    if isinstance(obj, datetime):
+      return obj.isoformat()
+    return json.JSONEncoder.default(self, obj)
+
+
 class OPService(object):
 
   def __init__(self):
@@ -58,9 +67,9 @@ class OPService(object):
 
     self.apis = []
 
-    # Every service has a "ping" endpoint
-    @self.flask_app.route("/ping", methods=['GET', 'POST'])
-    def ping():
+    # Every service has a "health" endpoint (used by Elastic Beanstalk)
+    @self.flask_app.route("/health", methods=['GET'])
+    def health():
       return ""
 
     # Every service has an "explore" endpoint
@@ -103,7 +112,7 @@ class OPService(object):
         return self._prepare_error_response(error, value)
 
   def _make_json_response(self, output):
-    serialized_output = json.dumps(output)
+    serialized_output = json.dumps(output, cls=_DateTimeEncoder)
     response = self.flask_app.make_response(serialized_output)
     response.mimetype = 'application/json'
     return response
@@ -192,15 +201,15 @@ def validate(input_data, input_format, key=None):
         if len(key) > 2 and key[0] == '[' and key[-1] == ']':
           optional_key = key[1:-1]
           if optional_key in input_data:
-            validate(input_data[optional_key], input_format[key], key=optional_key)
+            input_data[optional_key] = validate(input_data[optional_key], input_format[key], key=optional_key)
         else:
-          validate(input_data[key], input_format[key], key=key)
+          input_data[key] = validate(input_data[key], input_format[key], key=key)
     elif type(input_format) is list:
       assert type(input_data) is list, "Expected list"
       for i in range(len(input_data)):
-        validate(input_data[i], input_format[0], key=("%s[%i]" % (key or "", i)))
+        input_data[i] = validate(input_data[i], input_format[0], key=("%s[%i]" % (key or "", i)))
     else:
-      input_format(input_data)
+      return input_format(input_data)
   except Exception as e:
     msg = e.__class__.__name__ + " " + str(e)
     if (key):
