@@ -3,12 +3,14 @@ import inspect
 import json
 import logging
 
-from collections import defaultdict
+from collections import defaultdict, Iterable
 from datetime import datetime
 from flask_cors import CORS
 from functools import wraps
 
-from op_service import logging_config
+# This import configures the logging appropriately
+print("\n\nABOUT TO DO THE IMPORT...\n\n")
+from . import logging_config
 
 
 class NotFound(Exception):
@@ -51,17 +53,44 @@ class InvalidSubject(AuthorizationException):
   pass
 
 
-class _DateTimeEncoder(json.JSONEncoder):
+# Converts datetimes to ISO formatted strings
+# Converts unserializable iterables to lists
+class _APIOutputJSONEncoder(json.JSONEncoder):
 
   def default(self, obj):
     if isinstance(obj, datetime):
       return obj.isoformat()
-    return json.JSONEncoder.default(self, obj)
+    try:
+      return json.JSONEncoder.default(self, obj)
+    except TypeError:
+      if isinstance(obj, Iterable):
+        return [i for i in obj]
+      raise
+
+
+DEFAULT_CONFIG_FILE_PATH = "run/config.json"
+def _load_config(override_config_file_path):
+  config_file_path = override_config_file_path or DEFAULT_CONFIG_FILE_PATH
+  try:
+    config_file = open(config_file_path)
+    logging.info("Loading config from file at path '%s'..." % config_file_path)
+    serialized_config = config_file.read()
+    config = json.loads(serialized_config)
+    logging.info("Successfully loaded config")
+  except FileNotFoundError as e:
+    if override_config_file_path:
+      # If we've manually specified a particular config file, enforce that it actually exists
+      raise Exception("No config file found at path '%s'" % config_file_path) from e
+    logging.info("No config file at default path '%s' (continuing with empty config)" % config_file_path)
+    config = {}
+  return config
 
 
 class OPService(object):
 
-  def __init__(self):
+  def __init__(self, config_file_path=None):
+    self.config = _load_config(config_file_path)
+
     self.flask_app = flask.Flask('op-service')
     CORS(self.flask_app)
 
@@ -112,7 +141,7 @@ class OPService(object):
         return self._prepare_error_response(error, value)
 
   def _make_json_response(self, output):
-    serialized_output = json.dumps(output, cls=_DateTimeEncoder)
+    serialized_output = json.dumps(output, cls=_APIOutputJSONEncoder)
     response = self.flask_app.make_response(serialized_output)
     response.mimetype = 'application/json'
     return response

@@ -1,7 +1,7 @@
 import setuptools
 import sys
 
-assert sys.version_info >= (2, 7), 'Requires Python 2.7+'
+assert sys.version_info >= (3, 4)
 
 setuptools.setup(
   name='op-service',
